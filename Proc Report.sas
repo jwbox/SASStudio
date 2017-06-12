@@ -1,0 +1,10 @@
+title "Columns in &&M&I Dataset";
+proc report data = COLUMNS spacing = 2 split = '|' nowindows ;
+  columns  VARNUM NAME FORMAT LABEL memname ;
+  DEFINE MEMNAME / NOPRINT;
+  DEFINE VARNUM / ORDER NOPRINT;
+  DEFINE NAME / DISPLAY "Variable" left width = 32;
+  DEFINE Format / DISPLAY "Format" left width = 20;
+  DEFINE label / DISPLAY "Label" left width = 80 flow;
+  where memname = "&&M&I";
+  RUN;
