@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?><Task runNLS="never" schemaVersion="5.0">
+<Registration>
+   <Name>Library Contents</Name>
+   <Description>Displays all datasets in library, showing variables, labels and formats</Description>
+   <GUID>TBD</GUID>
+   <Procedures>Report</Procedures>
+   <Version>3.5</Version>
+</Registration>
+	
+	
+	<Metadata>
+		
+<DataSources>
+   <DataSource name="inlibname">
+   </DataSource>
+</DataSources>
+
+   <Options>
+      <Option inputType="string" name="dataTab">LIBRARY</Option>
+      <Option inputType="string" name="dataGroup">Choose any Dataset from Library of Interest</Option>
+
+   </Options>		
+	</Metadata>
+	
+	<UI>
+   <Container option="dataTab">
+      <Group open="true" option="dataGroup">
+         <DataItem data="inlibname"/>
+      </Group>
+
+   </Container>
+	</UI>
+	
+  	<CodeTemplate>
+		<![CDATA[
+		
+%let indsname = $inlibname;
+%let lib =  %SCAN(&indsname,1);
+%let dsn =  %SCAN(&indsname,2);
+
+/* Internal Macro*/
+
+
+%MACRO DATASETS;
+
+TITLE "Datasets in the &LIBNAME Library";
+proc report data = members spacing = 2 split = '|' nowindows;
+  columns  memname memtype index;
+  DEFINE MEMNAME / DISPLAY "Member Name" width = 32 left;
+  DEFINE MEMTYPE / DISPLAY "Member Type" width = 11 left;
+  DEFINE INdex / DISPLAY "Index" center width = 5;
+
+  RUN;
+TITLE;
+
+%DO I = 1 %TO &NMEM;
+title "Columns in &&M&I Dataset";
+proc report data = COLUMNS spacing = 2 split = '|' nowindows ;
+  columns  VARNUM NAME FORMAT LABEL memname ;
+  DEFINE MEMNAME / NOPRINT;
+  DEFINE VARNUM / ORDER NOPRINT;
+  DEFINE NAME / DISPLAY "Variable" left width = 32;
+  DEFINE Format / DISPLAY "Format" left width = 20;
+  DEFINE label / DISPLAY "Label" left width = 80 flow;
+  where memname = "&&M&I";
+  RUN;
+%END;
+title;
+%MEND;
+
+/* Main Macro */
+
+%MACRO LIBEDA(libname);
+
+Data members;
+set sashelp.vmember(WHERE=( LIBNAME = UPCASE( "&LIBNAME")));
+run;
+
+
+PROC SQL NOPRINT;
+SELECT COUNT(*) INTO :NMEM FROM MEMBERS;
+%LET NMEM = &NMEM;
+SELECT MEMNAME INTO :M1 - :M&NMEM FROM MEMBERS;
+QUIT;
+
+DATA COLUMNS;
+SET SASHELP.VCOLUMN (WHERE = (LIBNAME =  UPCASE( "&LIBNAME")));
+  IF UPCASE(TYPE) = "NUM" THEN DO;
+     if format = '' then format = "Numeric" ;
+  END;
+  ELSE DO;
+     format = "Char " ||put(length, 4.);
+  END;
+
+RUN;
+
+%DATASETS ;
+
+%MEND;
+%LIBEDA(&lib)
+
+
+
+
+		]]>
+	</CodeTemplate>
+</Task>

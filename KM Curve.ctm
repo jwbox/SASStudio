@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?><Task runNLS="never" schemaVersion="5.1">
+	<Registration>
+	<Name>KM Curve</Name>
+	<Description>Make a Histogram and Density Plot across values of a Panel Variable</Description>
+	<GUID>726B2B12-4542-4200-96F4-960C645D767F</GUID>
+	<Procedures>SGPLOT</Procedures>
+	<Version>3.6</Version>
+	<Links>
+		<Link href="http://documentation.sas.com/#/?softwareId=STUDIOMID&amp;softwareVersion=3.6&amp;softwareContextId=tasks&amp;requestor=inapp">SAS Studio Task Reference Guide</Link>
+	    <Link href="http://support.sas.com/cdlsearch?nh=25&amp;ct=80000&amp;qt=PROC+SGPLOT">PROC SGPLOT Documentation</Link>                                
+        <Link href="http://support.sas.com/dsearch?&amp;ct=5240&amp;qt=PROC+SGPLOT">PROC SGPLOT Papers</Link>
+        <Link href="http://support.sas.com/kb/?Find=Search&amp;ct=51000&amp;qt=PROC+SGPLOT">PROC SGPLOT Samples and SAS Notes</Link>
+	</Links>
+	<Category>Graph</Category>
+	</Registration>
+	
+	<Metadata>
+      <DataSources>
+        <DataSource name="DATASOURCE">
+          <Roles>
+            <Role maxVars="1" minVars="1" name="TimeVar" order="true" type="N">Time Variable:</Role>
+            <Role maxVars="1" minVars="1" name="ResponseVar" order="true" type="N">Event Variable:</Role>
+            <Role maxVars="1" minVars="1" name="StrataVar" order="true" >Strata Variable:</Role>
+          </Roles>
+        </DataSource>
+       </DataSources>
+
+      <Options>
+        <Option inputType="string" name="dataTab">DATA</Option>
+        <Option inputType="string" name="dataGroup">Select a Dataset</Option>
+        <Option inputType="string" name="ROLESGROUP">Select the Variables for the Roles</Option>
+        <Option inputType="string" name="OPTIONSGROUP">Select the Options for the Analysis</Option>
+        <Option inputType="distinct" name = "CensorVal" source = "ResponseVar" max = "10">Select Censor Value:</Option>
+      
+       </Options>		
+	</Metadata>
+
+  <!--- Define the UI for task options                         -->
+	
+  <UI>
+   <Container option="dataTab">
+     <Group open="true" option="dataGroup">
+       <DataItem data="DATASOURCE"/>
+     </Group>
+
+     <Group open="true" option="ROLESGROUP">
+       <RoleItem role="TimeVar"/>
+       <RoleItem role="ResponseVar"/>
+       <RoleItem role="StrataVar"/>
+     </Group>
+ 
+     <Group open="true" option="OPTIONSGROUP">
+       <OptionItem option ="CensorVal"/>
+     </Group>
+       
+   
+     
+     
+   </Container>
+  </UI>
+	
+	
+  	<CodeTemplate>
+		<![CDATA[
+          #if ( $TimeVar.size() > 0)  #set( $_time=$TimeVar.get(0) ) #end
+          #if ( $ResponseVar.size() > 0)  #set( $_event=$ResponseVar.get(0) ) #end    
+          #if ( $StrataVar.size() > 0)  #set( $_strata=$StrataVar.get(0) ) #end  
+     
+ods select SurvivalPlot;
+ODS NOPROCTITLE;
+proc lifetest data = $DATASOURCE plots=survival(cb=hw test atrisk);
+Time $_time * $_event($CensorVal);
+strata $_strata;
+
+run;
+
+ODS Select all;
+		]]>
+	</CodeTemplate>
+</Task>

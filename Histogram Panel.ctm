@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Task schemaVersion="5.1" runNLS="never">
+	<Registration>
+	<Name>Histogram Panel</Name>
+	<Description>Make a Histogram and Density Plot across values of a Panel Variable</Description>
+	<GUID>726B2B12-4542-4200-96F4-960C645D767F</GUID>
+	<Procedures>SGPLOT</Procedures>
+	<Version>3.6</Version>
+	<Links>
+		<Link href="http://documentation.sas.com/#/?softwareId=STUDIOMID&amp;softwareVersion=3.6&amp;softwareContextId=tasks&amp;requestor=inapp">SAS Studio Task Reference Guide</Link>
+	    <Link href="http://support.sas.com/cdlsearch?nh=25&amp;ct=80000&amp;qt=PROC+SGPLOT">PROC SGPLOT Documentation</Link>                                
+        <Link href="http://support.sas.com/dsearch?&amp;ct=5240&amp;qt=PROC+SGPLOT">PROC SGPLOT Papers</Link>
+        <Link href="http://support.sas.com/kb/?Find=Search&amp;ct=51000&amp;qt=PROC+SGPLOT">PROC SGPLOT Samples and SAS Notes</Link>
+	</Links>
+	<Category>Graph</Category>
+	</Registration>
+	
+	<Metadata>
+      <DataSources>
+        <DataSource name="DATASOURCE">
+          <Roles>
+            <Role maxVars="1" minVars="1" name="NVAR" order="true" type="N">Analysis variable:</Role>
+            <Role maxVars="1" minVars="1" name="CVAR" order="true" type="C">Panel Variable:</Role>
+          </Roles>
+        </DataSource>
+       </DataSources>
+
+      <Options>
+        <Option inputType="string" name="dataTab">DATA</Option>
+        <Option inputType="string" name="dataGroup">Select a Dataset</Option>
+        <Option inputType="string" name="ROLESGROUP">Select the Variables for the Roles</Option>
+      </Options>		
+	</Metadata>
+
+  <!--- Define the UI for task options                         -->
+	
+  <UI>
+   <Container option="dataTab">
+     <Group open="true" option="dataGroup">
+       <DataItem data="DATASOURCE"/>
+     </Group>
+
+     <Group open="true" option="ROLESGROUP">
+       <RoleItem role="NVAR"/>
+       <RoleItem role="CVAR"/>
+     </Group>
+   </Container>
+  </UI>
+	
+	
+  	<CodeTemplate>
+		<![CDATA[
+          #if ( $NVAR.size() > 0)  #set( $ANALYSISVAR=$NVAR.get(0) ) #end
+          #if ( $CVAR.size() > 0)  #set( $PANELVAR=$CVAR.get(0) ) #end    
+     
+          proc sgpanel data =$DATASOURCE;
+             panelby $PANELVAR   / layout = panel novarname;
+             histogram $ANALYSISVAR;
+             density $ANALYSISVAR;
+           run;
+		]]>
+	</CodeTemplate>
+</Task>

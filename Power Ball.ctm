@@ -1,0 +1,267 @@
+<?xml version="1.0" encoding="UTF-8"?><Task runNLS="never" schemaVersion="5.0">
+	<Registration>
+	<Name>Power Ball</Name>
+	<Description>Simulate some Power Ball Tickets</Description>
+	<GUID>TBD</GUID>
+	<Procedures>Survey Select</Procedures>
+	<Version>3.5</Version>
+	<Links>
+		<Link href="http://support.sas.com/software/products/sasstudio/index.html#s1=2">SAS Studio Documentation</Link>
+	</Links>
+	</Registration>
+	
+	<Metadata>
+		
+<DataSources>
+
+</DataSources>
+
+
+		<Options>
+			<Option inputType="string" name="OptionsTab">OPTIONS</Option>
+			
+			<Option inputType="string" name="observationsGroup">OBSERVATIONS</Option>
+			<Option inputType="string" name="infoText">Simulate the results of buying Power Ball ticktes.</Option>
+			<Option decimalPlaces="0" defaultValue="20" inputType="numstepper" maxValue="100" minValue="1" name="numTix" required="true">Number of Tickets Purchased:</Option>
+			<Option decimalPlaces="0" defaultValue="5" inputType="numstepper" maxValue="30" minValue="1" name="numSim" required="true">Number of Simulations to Run:</Option>
+			
+		</Options>		
+
+		
+	</Metadata>
+	
+	  <UI>
+		  <Container option="OptionsTab">
+			<Group open="true" option="observationsGroup">
+				<OptionItem option="infoText"/>
+				<OptionItem option="numTix"/>
+				<OptionItem option="numSim"/>
+			</Group>
+
+		  </Container>
+	  </UI>
+	
+  	<CodeTemplate>
+		<![CDATA[
+
+
+/* Assign the number of tickets and runs here */
+%let tix= $numTix;
+%let Runs = $numSim;
+
+ODS NOPROCTITLE;
+
+/* Give the winning numbers */
+
+%let W1 = 8;
+%LET W2 = 27;
+%LET W3 = 34;
+%LET W4 = 4;
+%LET W5 = 19;
+%LET PB = 10;
+
+
+/* Now Simulate  */
+
+
+
+
+data whitelist;
+	do w=1 to 69;
+		output;
+	end;
+run;
+
+data powers;
+	do PB=1 to 26;
+		output;
+	end;
+run;
+
+
+
+
+
+%macro wlst(pf);
+	%do i=1 %to &tix;
+		&&pf._&i
+%end;
+%mend;
+
+%macro GetNums;
+	%DO K=1 %to &tix;
+
+		proc surveyselect data=WORK.WHITELIST out=WORK.WhiteDraw method=srs 
+				sampsize=5 noprint;
+			id w;
+		run;
+
+		proc transpose data=work.WhiteDraw out=whites_&K (DROP=_NAME_) prefix=W;
+			var W;
+		run;
+
+		proc surveyselect data=WORK.powers out=WORK.PB_&k method=srs sampsize=1 
+				noprint;
+			id PB;
+		run;
+
+	%end;
+%mend;
+
+
+%MACRO CHECK;
+	%DO b=1 %to 5;
+
+		%do j=1 %to 5;
+			if W&b=&&w&J then WhiteMatch=WhiteMatch+ 1;
+		%end;
+	%END;
+%MEND;
+
+
+
+
+%MACRO LOTTERY;
+%DO R = 1 %TO &RUNS;
+%GetNums;
+
+
+data Whites;
+	length ticket 8.;
+	set %wlst(whites);
+	ticket=_N_;
+run;
+
+data Reds;
+	length ticket 8.;
+	set %wlst(PB);
+	ticket=_N_;
+run;
+
+
+data results_&R;
+	merge Whites Reds;
+	by ticket;
+	WhiteMatch=0;
+	%check;
+	powerball=(PB=&PB);
+
+	IF powerball then
+		do;
+
+			if WhiteMatch=5 then
+				prize=1500000000;
+			else if WhiteMatch=4 then
+				prize=50000;
+			else if WhiteMatch=3 then
+				prize=100;
+			else if WhiteMatch=2 then
+				prize=7;
+			else
+				prize=4;
+		end;
+	ELSE
+		DO;
+
+			if WhiteMatch=5 then
+				prize=1000000;
+			else if WhiteMatch=4 then
+				prize=100;
+			else if WhiteMatch=3 then
+				prize=7;
+			else
+				prize=0;
+		END;
+	Winnings=prize - 2;
+	format prize winnings dollar15.;
+run;
+
+proc sql ;
+    Create table Summary_&R as 
+	Select count(*) as Tickets, sum(Prize > 0) as Won, sum(prize) as TotalWinnings 
+		format=dollar15., sum(winnings) as Earned format=dollar15., max(prize) as 
+		BestTicket format=dollar15.
+from results_&R;
+quit;
+
+PROC SQL noprint;
+SELECT EARNED INTO :RETURN SEPARATED BY ',' FROM Summary_&r;
+QUIT;
+
+
+title "Results from Simulation &R";
+TITLE2 "Result = &RETURN";
+proc freq data = results_&R;
+	table prize / out = prize_&R;
+run;
+title;
+title2;
+
+
+
+%END;
+
+  proc datasets lib = work noprint;
+    delete WHITES_: PB_:;
+  quit;
+
+
+%MEND;
+
+
+%LOTTERY;
+
+%macro lst(pf);
+	%do i=1 %to &runs;
+		&&pf._&i
+%end;
+%mend;
+
+
+
+data summary;
+set %lst(summary);
+Sim = _N_;
+run;
+
+data prizes;
+set %lst(prize);
+run;
+
+TItle "Individual Ticket Wins";
+proc freq data = prizes; weight count; table prize/out = prizesum; run;
+title "Summary of Total Winnings";
+proc freq data = summary; table totalwinnings; run; 
+title "Individual Run Summary";
+
+proc sql noprint;
+create table winns as 
+select avg(TotalWinnings) as Amount format = dollar12.2
+from summary;
+select Amount into :EV from winns; 
+quit;
+
+data _null_;
+call symput('spent',trim(left(&tix*2)));
+run;
+%put &=spent;
+
+
+Title2 "&tix tickets purchased for a cost of $&spent, &runs Simulations";
+title3 "Overall Expected Winnings = &EV";
+proc sql;
+Select sim "Run Number"
+      ,won "Winning Tickets"
+      ,TotalWinnings "Cash Back"
+      ,BestTicket "Best Ticket"
+      ,Earned "Overall Return"
+from summary;
+quit;
+title;
+  proc datasets lib = work noprint;
+    delete PRIZE_: RESULTS_: SUMMARY_: winns;
+  quit;
+
+		]]>
+	</CodeTemplate>
+</Task>
